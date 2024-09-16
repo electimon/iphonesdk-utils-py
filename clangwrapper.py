@@ -82,7 +82,7 @@ def sdk_settings_input_loop():
                 if encounteredVersion:
                     sdk_ver = line[line.find("ing>")+4:line.find("</s")]
                     break
-                if "Version" in line:
+                if "<key>Version</key>" in line:
                     encounteredVersion = True
     return sdk_ver, sdk_settings_path.as_posix()
 
