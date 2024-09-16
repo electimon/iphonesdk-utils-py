@@ -31,7 +31,10 @@ def main():
     args = args + sys.argv[1:]
 
     env_l = os.environ.copy()
-    env_l["IPHONEOS_DEPLOYMENT_TARGET"] = sdk_ver
+    if "arm" in sdk_arch:
+        env_l["IPHONEOS_DEPLOYMENT_TARGET"] = sdk_ver
+    else:
+        env_l["MACOSX_DEPLOYMENT_TARGET"] = sdk_ver
     env_l["IOS_SIGN_CODE_WHEN_BUILD"] = "1"
     os.execvpe(command, args, env_l)
 
