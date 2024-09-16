@@ -5,7 +5,7 @@ homedir = os.path.expanduser("~")
 xdg_config_path = os.path.join(homedir, ".config/electi-clangwrapper")
 if not os.path.exists(xdg_config_path):
     os.makedirs(xdg_config_path)
-target_prefix = "-".join(sys.argv[0].split("-")[:-1])
+target_prefix = "-".join(sys.argv[0].split("/")[-1].split("-")[:-1])
 
 def main():
     check_tools_existance()
