@@ -43,8 +43,13 @@ resources = [
 
 env.Command("xcbuild/{{ project_name }}.app", None, [
     Delete("xcbuild/{{ project_name }}.app"),
-    f"cp -r {' '.join(resources)} xcbuild/{{ project_name }}.app",
-    "cp -r xcbuild/{{ project_name }} xcbuild/{{ project_name }}.app/{{ project_name }}",
+    Mkdir("xcbuild/{{ project_name }}.app"),
+    f"cp -r {' '.join(resources)} xcbuild/{{ project_name }}.app" if resources else "",
+    "echo \\#\\!/bin/bash > xcbuild/{{ project_name }}.app/{{ project_name }}",
+    "echo root=$$\(dirname \\\"\$0\\\"\) >> xcbuild/{{ project_name }}.app/{{ project_name }}",
+    "echo exec \\\"$$\{root\}\\\"/{{ project_name }}_ >> xcbuild/{{ project_name }}.app/{{ project_name }}",
+    "chmod 755 xcbuild/{{ project_name }}.app/{{ project_name }}",
+    "cp -r xcbuild/{{ project_name }}_ xcbuild/{{ project_name }}.app/{{ project_name }}_",
     "cp Info.plist xcbuild/{{ project_name }}.app/Info.plist",
     "find xcbuild/{{ project_name }}.app -name *.png | xargs ios-pngcrush -c",
     "find xcbuild/{{ project_name }}.app -name *.plist | xargs ios-plutil -c",
@@ -52,7 +57,7 @@ env.Command("xcbuild/{{ project_name }}.app", None, [
 ])
 
 env.AlwaysBuild("xcbuild/{{ project_name }}.app")
-env.Depends('xcbuild/{{ project_name }}.app', 'xcbuild/{{ project_name }}.signed')
+env.Depends('xcbuild/{{ project_name }}.app', 'xcbuild/{{ project_name }}_.signed')
 
 env.Command('ios-install', None, [
 	f"sshpass -p alpine ssh -o PreferredAuthentications=password root@{IPHONE_IP} 'rm -fr /Applications/{{ project_name }}.app'",

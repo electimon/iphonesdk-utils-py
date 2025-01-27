@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import argparse
 from datetime import datetime
+import sys
 from jinja2 import Environment
 
 script_dir = Path(__file__).resolve().parent
