@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import os, sys, shutil, pathlib, json
+import biplist, plistlib
 
 homedir = os.path.expanduser("~")
 xdg_config_path = os.path.join(homedir, ".config/electi-clangwrapper")
@@ -34,7 +35,12 @@ def check_config_or_write():
             json.dump(sdk_settings, f)
     else:
         with open(os.path.join(xdg_config_path, f"{target_prefix}.json"), "r") as f:
-            sdk_settings = json.load(f)
+            try:
+                sdk_settings = json.load(f)
+            except json.JSONDecodeError:
+                print(f"Error: {target_prefix}.json is corrupted, please rerun the script")
+                os.remove(os.path.join(xdg_config_path, f"{target_prefix}.json"))
+                sys.exit(1)
             sdk_path = sdk_settings["sdk_path"]
             sdk_ver = sdk_settings["sdk_version"]
     return sdk_ver, sdk_path
@@ -48,13 +54,11 @@ def sdk_settings_input_loop():
             print(f"SDKSettings.plist not found in {sdk_path}")
             sdk_path = ""
         else:
-            encounteredVersion = False
             sdk_ver = ""
-            for line in open(sdk_settings_path, "r"):
-                if encounteredVersion:
-                    sdk_ver = line[line.find("ing>")+4:line.find("</s")]
-                    break
-                if "<key>Version</key>" in line:
-                    encounteredVersion = True
+            try:
+                plist_stuff = biplist.readPlist(sdk_settings_path.as_posix())
+            except:
+                plist_stuff = plistlib.load(open(sdk_settings_path.as_posix(), "rb"))
+            sdk_ver = plist_stuff["Version"]
     return sdk_ver, sdk_path
 

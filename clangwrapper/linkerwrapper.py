@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 import os, sys
-from utils import check_tools_existance, get_linker_name
+from utils import check_tools_existance, get_linker_name, check_config_or_write
 
 def main():
     check_tools_existance()
+    check_config_or_write()
     args = []
     linking_binary = False
     command = get_linker_name()
@@ -18,7 +19,6 @@ def main():
             args.append("-lc++abi")
         if "-bind_at_load" in args:
             args.remove("-bind_at_load")
-    print(args)
     if "-x" in args:
         sys.exit(1)
     os.execvpe(command, args, os.environ.copy())

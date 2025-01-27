@@ -52,7 +52,6 @@ def main():
     else:
         env_l["MACOSX_DEPLOYMENT_TARGET"] = sdk_ver
     env_l["IOS_SIGN_CODE_WHEN_BUILD"] = "1"
-    print(args)
     os.execvpe(command, args, env_l)
 
 main()

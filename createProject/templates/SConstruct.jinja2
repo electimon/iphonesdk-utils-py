@@ -1,0 +1,84 @@
+from SCons.Script import *
+import glob, os
+
+IPHONE_IP = ''
+VERSION = '1.0'
+
+env = Environment(
+    CC='arm-apple-darwin9-clang',
+    CXX='arm-apple-darwin9-clang++',
+    CFLAGS=[
+        "-miphoneos-version-min=3.0",
+        "-arch", "armv6",
+        "-fblocks",
+        "-isysroot", "{{ sdk_path }}",
+        "-Werror"
+    ],
+    CXXFLAGS=[
+        "-miphoneos-version-min=3.0",
+        "-arch", "armv6",
+        "-fblocks",
+        "-isysroot", "{{ sdk_path }}",
+        "-Werror"
+    ],
+    LINKFLAGS=[
+        "-miphoneos-version-min=3.0",
+        "-arch", "armv6",
+        "-isysroot", "{{ sdk_path }}",
+        "-framework", "Foundation",
+        "-framework", "UIKit",
+    ],
+    ENV={'PATH': os.environ['PATH']}
+)
+
+env.Clean('.', 'xcbuild')
+
+srcs = glob.glob('**/**.m', recursive=True) + glob.glob('**/**.c', recursive=True) + glob.glob('**/**.cpp', recursive=True)
+env.Program('xcbuild/{{ project_name }}_', srcs)
+env.VariantDir('xcbuild', '.', duplicate=0)
+env.Command('xcbuild/{{ project_name }}_.signed', 'xcbuild/{{ project_name }}_', 'ldid -Sent.xml xcbuild/{{ project_name }}_')
+
+resources = [
+]
+
+env.Command("xcbuild/{{ project_name }}.app", None, [
+    Delete("xcbuild/{{ project_name }}.app"),
+    f"cp -r {' '.join(resources)} xcbuild/{{ project_name }}.app",
+    "cp -r xcbuild/{{ project_name }} xcbuild/{{ project_name }}.app/{{ project_name }}",
+    "cp Info.plist xcbuild/{{ project_name }}.app/Info.plist",
+    "find xcbuild/{{ project_name }}.app -name *.png | xargs ios-pngcrush -c",
+    "find xcbuild/{{ project_name }}.app -name *.plist | xargs ios-plutil -c",
+    "find xcbuild/{{ project_name }}.app -name *.strings | xargs ios-plutil -c"
+])
+
+env.AlwaysBuild("xcbuild/{{ project_name }}.app")
+env.Depends('xcbuild/{{ project_name }}.app', 'xcbuild/{{ project_name }}.signed')
+
+env.Command('ios-install', None, [
+	f"sshpass -p alpine ssh -o PreferredAuthentications=password root@{IPHONE_IP} 'rm -fr /Applications/{{ project_name }}.app'",
+	f"sshpass -p alpine scp -r xcbuild/{{ project_name }}.app root@{IPHONE_IP}:/Applications/{{ project_name }}.app",
+	f"sshpass -p alpine ssh -o PreferredAuthentications=password mobile@{IPHONE_IP} 'uicache'",
+	f"sshpass -p alpine ssh -o PreferredAuthentications=password mobile@{IPHONE_IP} 'killall -9 {{ project_name }}_'"
+])
+
+env.Depends('ios-install', 'xcbuild/{{ project_name }}.app')
+
+env.Command('deb-build', None, [
+    Delete("xcbuild/{{ project_name }}-deb"),
+    Mkdir("xcbuild/{{ project_name }}-deb/DEBIAN"),
+    Mkdir("xcbuild/{{ project_name }}-deb/Applications"),
+    "cp -r xcbuild/{{ project_name }}.app xcbuild/{{ project_name }}-deb/Applications/{{ project_name }}.app",
+    "cp control xcbuild/{{ project_name }}-deb/DEBIAN/control",
+    f"echo Version: {VERSION} >> xcbuild/{{ project_name }}-deb/DEBIAN/control",
+    f"dpkg-deb -b -Zgzip --root-owner-group xcbuild/{{ project_name }}-deb xcbuild/{{ project_name }}-v{VERSION}.deb"
+])
+
+env.AlwaysBuild('deb-build')
+env.Depends('deb-build', 'xcbuild/{{ project_name }}.app')
+env.Alias('dist', ['xcbuild/{{ project_name }}_.signed', 'xcbuild/{{ project_name }}.app'])
+env.Alias('install', ['dist', 'ios-install'])
+env.Alias('deb', ['dist', 'deb-build'])
+
+env.Clean('xcbuild/{{ project_name }}_', 'xcbuild')
+
+Default('xcbuild/{{ project_name }}_.signed')
